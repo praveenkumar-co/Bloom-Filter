@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "benchmark:missing": "npm run build && node examples/benchmark-missing-db.mjs",
+    "example:all-methods": "npm run build && node examples/all-methods.mjs",
     "check:redis": "npm run build && node examples/check-real-redis.mjs",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "redis": "^5.12.1",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"

@@ -2,21 +2,44 @@
 
 A TypeScript toolkit for production-friendly, Redis-backed scalable Bloom filters in Node.js.
 
-Bloom filters are useful when you want to avoid expensive database, cache, or disk lookups for values that definitely do not exist.
+Bloom filters help you avoid expensive database, cache, or disk lookups for values that definitely do not exist.
 
-Local : redis-stack-server
+## Quick Start
 
-CLoud : REDIS_URL=rediss://username:password@host:port
+Install the package:
 
-Finally :  Install scalable-bloom-kit
-Have RedisBloom-compatible Redis running
-Use REDIS_URL to connect
+```bash
+npm install scalable-bloom-kit redis
+```
+
+You also need a RedisBloom-compatible Redis server. The easiest production-style setup is Redis Cloud or any hosted Redis Stack database.
+
+```bash
+REDIS_URL=redis://username:password@host:port
+```
+
+Some providers use TLS. In that case use:
+
+```bash
+REDIS_URL=rediss://username:password@host:port
+```
+
+For local macOS testing, you can run Redis Stack Server:
+
+```bash
+redis-stack-server
+```
+
+Then use `process.env.REDIS_URL` in your app:
 
 ```ts
 import { createClient } from "redis";
 import { BloomFilter } from "scalable-bloom-kit";
 
-const client = createClient({ url: process.env.REDIS_URL });
+const client = createClient({
+  url: process.env.REDIS_URL ?? "redis://127.0.0.1:6379"
+});
+
 await client.connect();
 
 const videos = new BloomFilter({
@@ -31,21 +54,25 @@ await videos.init();
 await videos.add("video:abc123");
 
 const maybeExists = await videos.mightContain("video:abc123");
+
+await client.disconnect();
 ```
+
+If `mightContain()` returns `false`, the item is definitely not present and you can skip the database. If it returns `true`, check your database because Bloom filters can have false positives.
+
+## Requirements
+
+- Node.js `18+`
+- A Redis client such as `redis`
+- Redis Stack, RedisBloom, Redis Cloud, or another Redis server that supports RedisBloom commands like `BF.RESERVE`, `BF.ADD`, and `BF.EXISTS`
+
+This package does not install or start Redis for you. It connects to the RedisBloom-compatible Redis server you provide.
 
 ## Why RedisBloom?
 
 In-memory Bloom filters are fast, but every Node.js process gets its own copy and the filter disappears when the process restarts. RedisBloom keeps the filter in Redis, so multiple app instances can share one filter and Redis persistence can survive restarts.
 
-This package does not require Docker. Your application only needs access to Redis Stack or Redis with the RedisBloom module enabled.
-
-## Install
-
-```bash
-npm install scalable-bloom-kit redis
-```
-
-`redis` is a peer dependency. You own the Redis connection, which makes the package easy to use in Express, NestJS, workers, queues, and existing backend services.
+This package does not require Docker. Docker is only one possible way to run Redis Stack locally.
 
 ## API
 
@@ -89,6 +116,53 @@ Use `mightContain()` carefully:
 - `false` means the item is definitely not in the set.
 - `true` means the item may be in the set, so check your database or source of truth.
 
+## Full Method Demo
+
+Create `index.mjs`:
+
+```js
+import { createClient } from "redis";
+import { BloomFilter } from "scalable-bloom-kit";
+
+const client = createClient({
+  url: process.env.REDIS_URL ?? "redis://127.0.0.1:6379"
+});
+
+await client.connect();
+
+const users = new BloomFilter({
+  client,
+  key: "demo:users:bloom",
+  expectedItems: 100_000,
+  errorRate: 0.01,
+  expansion: 2
+});
+
+await users.init();
+
+console.log("add user:123", await users.add("user:123"));
+console.log("add duplicate user:123", await users.add("user:123"));
+console.log("addMany", await users.addMany(["user:456", "user:789"]));
+
+console.log("mightContain user:123", await users.mightContain("user:123"));
+console.log("mightContain user:ghost", await users.mightContain("user:ghost"));
+console.log(
+  "mightContainMany",
+  await users.mightContainMany(["user:123", "user:456", "user:ghost"])
+);
+
+console.log("info", await users.info());
+console.log("clear", await users.clear());
+
+await client.disconnect();
+```
+
+Run:
+
+```bash
+node index.mjs
+```
+
 ## Example: Skip Database Lookups
 
 ```ts
@@ -109,30 +183,23 @@ app.get("/videos/:id", async (req, res) => {
 });
 ```
 
-## Deletion
-
-Bloom filters do not safely support deletion. For use cases where deletion is required, a Cuckoo filter is usually a better fit. Cuckoo filter support is planned for a later version.
-
-## Development
-
-```bash
-npm install
-npm run typecheck
-npm test
-npm run build
-```
-
-Integration tests require Redis Stack or Redis with RedisBloom enabled. Unit tests use a fake Redis client and do not require Docker.
-
 ## Real RedisBloom Check
 
-Start a RedisBloom-compatible Redis server first. For local macOS testing with Redis Stack Server:
+Start a RedisBloom-compatible Redis server first.
+
+For local macOS testing:
 
 ```bash
 redis-stack-server
 ```
 
-In another terminal:
+For Redis Cloud or another hosted RedisBloom server:
+
+```bash
+REDIS_URL=redis://username:password@host:port
+```
+
+Then run:
 
 ```bash
 npm run check:redis
@@ -150,3 +217,39 @@ You can tune the check:
 ```bash
 REDIS_URL=redis://127.0.0.1:6379 CHECK_REQUESTS=5000 DB_LATENCY_MS=5 npm run check:redis
 ```
+
+## Deletion
+
+Standard Bloom filters do not safely support deletion. If you need deletion, use a Cuckoo filter or Counting Bloom filter design. Cuckoo filter support is planned for a later version.
+
+## Development
+
+```bash
+npm install
+npm run typecheck
+npm test
+npm run build
+npm run check:redis
+```
+
+Unit tests use a fake Redis client and do not require Redis. `npm run check:redis` requires Redis Stack, RedisBloom, or Redis Cloud.
+
+## Contributing
+
+Contributions are welcome. Please keep changes focused, add tests for behavior changes, and run the checks before opening a pull request.
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+For RedisBloom integration changes, also run:
+
+```bash
+npm run check:redis
+```
+
+## License
+
+MIT © Contributors
