@@ -4,6 +4,14 @@ A TypeScript toolkit for production-friendly, Redis-backed scalable Bloom filter
 
 Bloom filters are useful when you want to avoid expensive database, cache, or disk lookups for values that definitely do not exist.
 
+Local : redis-stack-server
+
+CLoud : REDIS_URL=rediss://username:password@host:port
+
+Finally :  Install scalable-bloom-kit
+Have RedisBloom-compatible Redis running
+Use REDIS_URL to connect
+
 ```ts
 import { createClient } from "redis";
 import { BloomFilter } from "scalable-bloom-kit";
@@ -115,3 +123,30 @@ npm run build
 ```
 
 Integration tests require Redis Stack or Redis with RedisBloom enabled. Unit tests use a fake Redis client and do not require Docker.
+
+## Real RedisBloom Check
+
+Start a RedisBloom-compatible Redis server first. For local macOS testing with Redis Stack Server:
+
+```bash
+redis-stack-server
+```
+
+In another terminal:
+
+```bash
+npm run check:redis
+```
+
+This checks:
+
+- Redis is reachable.
+- RedisBloom module `bf` is loaded.
+- `BloomFilter.add()` and `BloomFilter.mightContain()` work with real Redis.
+- Missing records can skip simulated database lookups.
+
+You can tune the check:
+
+```bash
+REDIS_URL=redis://127.0.0.1:6379 CHECK_REQUESTS=5000 DB_LATENCY_MS=5 npm run check:redis
+```

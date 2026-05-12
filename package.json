@@ -1,6 +1,6 @@
 {
   "name": "scalable-bloom-kit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A TypeScript RedisBloom toolkit for scalable Bloom filters in Node.js.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "benchmark:missing": "npm run build && node examples/benchmark-missing-db.mjs",
+    "check:redis": "npm run build && node examples/check-real-redis.mjs",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "keywords": [
