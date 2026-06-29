@@ -1,6 +1,6 @@
 {
   "name": "scalable-bloom-kit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A TypeScript RedisBloom toolkit for scalable Bloom filters in Node.js.",
   "type": "module",
   "main": "./dist/index.cjs",
