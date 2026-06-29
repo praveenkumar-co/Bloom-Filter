@@ -35,7 +35,7 @@ jobs:
 
       - name: Build Project
         run: npm run build
-
+  # direct publsh to npm
   publish:
     name: Publish to NPM
     needs: test-and-build
